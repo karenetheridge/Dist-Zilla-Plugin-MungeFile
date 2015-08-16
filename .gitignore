@@ -2,7 +2,5 @@
 /.build/
 !/.gitignore
 /.latest
-/Dist-Zilla-Plugin-MungeFile-WithData-*/
-/Dist-Zilla-Plugin-MungeFile-WithData-*.tar.gz
-/Dist-Zilla-Plugin-MungeFile-WithDataSection-*/
-/Dist-Zilla-Plugin-MungeFile-WithDataSection-*.tar.gz
+/Dist-Zilla-Plugin-MungeFile-*/
+/Dist-Zilla-Plugin-MungeFile-*.tar.gz

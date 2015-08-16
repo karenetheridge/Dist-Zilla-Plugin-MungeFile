@@ -7,6 +7,9 @@ use if $ENV{AUTHOR_TESTING}, 'Test::Warnings';
 use Test::DZil;
 use Path::Tiny;
 use Test::Deep;
+use Test::Deep;
+
+binmode $_, ':encoding(UTF-8)' foreach *STDOUT, *STDERR, map { Test::Builder->new->$_ } qw(output failure_output);
 
 binmode $_, ':encoding(UTF-8)' foreach *STDOUT, *STDERR, map { Test::Builder->new->$_ } qw(output failure_output);
 
@@ -17,24 +20,14 @@ my $tzil = Builder->from_config(
             path(qw(source dist.ini)) => simple_ini(
                 [ GatherDir => ],
                 [ MetaConfig => ],
-                [ 'MungeFile::WithDataSection' => { finder => ':MainModule', house => 'château' } ],
+                [ 'MungeFile' => { finder => ':MainModule', house => 'château' } ],
             ),
             'source/lib/Module.pm' => <<'MODULE'
 package Module;
 
-my $string = {{
-'"our list of items are: '
-. join(', ', split(' ', $DATA))   # awk-style emulation
-. "\n" . 'And that\'s just great!\n"'
-}};
+my $string = "{{ uc('hello hello') }}";
 my ${{ $house }} = 'my castle';
 1;
-__DATA__
-dog
-cat
-pony
-__END__
-This is content that should not be in the DATA section.
 MODULE
         },
     },
@@ -50,16 +43,9 @@ is(
     <<'NEW_MODULE',
 package Module;
 
-my $string = "our list of items are: dog, cat, pony
-And that's just great!\n";
+my $string = "HELLO HELLO";
 my $château = 'my castle';
 1;
-__DATA__
-dog
-cat
-pony
-__END__
-This is content that should not be in the DATA section.
 NEW_MODULE
     'module content is transformed',
 );
@@ -70,16 +56,16 @@ cmp_deeply(
         x_Dist_Zilla => superhashof({
             plugins => supersetof(
                 {
-                    class => 'Dist::Zilla::Plugin::MungeFile::WithDataSection',
+                    class => 'Dist::Zilla::Plugin::MungeFile',
                     config => {
-                        'Dist::Zilla::Plugin::MungeFile::WithDataSection' => {
+                        'Dist::Zilla::Plugin::MungeFile' => {
                             finder => [ ':MainModule' ],
                             files => [ ],
                             house => "ch\x{e2}teau",
                         },
                     },
-                    name => 'MungeFile::WithDataSection',
-                    version => Dist::Zilla::Plugin::MungeFile::WithDataSection->VERSION,
+                    name => 'MungeFile',
+                    version => Dist::Zilla::Plugin::MungeFile->VERSION,
                 },
             ),
         }),
