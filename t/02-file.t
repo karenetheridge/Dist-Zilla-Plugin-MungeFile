@@ -14,21 +14,13 @@ my $tzil = Builder->from_config(
             path(qw(source dist.ini)) => simple_ini(
                 [ GatherDir => ],
                 [ MetaConfig => ],
-                [ 'MungeFile::WithDataSection' => { file => ['lib/Module.pm'] } ],
+                [ 'MungeFile' => { file => ['lib/Module.pm'] } ],
             ),
             'source/lib/Module.pm' => <<'MODULE'
 package Module;
 
-my $string = {{
-'"our list of items are: '
-. join(', ', split(' ', $DATA))   # awk-style emulation
-. "\n" . 'And that\'s just great!\n"'
-}};
+my $string = "{{ uc('hello hello') }}";
 1;
-__DATA__
-dog
-cat
-pony
 MODULE
         },
     },
@@ -44,13 +36,8 @@ is(
     <<'NEW_MODULE',
 package Module;
 
-my $string = "our list of items are: dog, cat, pony
-And that's just great!\n";
+my $string = "HELLO HELLO";
 1;
-__DATA__
-dog
-cat
-pony
 NEW_MODULE
     'module content is transformed',
 );
@@ -61,15 +48,15 @@ cmp_deeply(
         x_Dist_Zilla => superhashof({
             plugins => supersetof(
                 {
-                    class => 'Dist::Zilla::Plugin::MungeFile::WithDataSection',
+                    class => 'Dist::Zilla::Plugin::MungeFile',
                     config => {
-                        'Dist::Zilla::Plugin::MungeFile::WithDataSection' => {
+                        'Dist::Zilla::Plugin::MungeFile' => {
                             finder => [ ],
                             files => [ 'lib/Module.pm' ],
                         },
                     },
-                    name => 'MungeFile::WithDataSection',
-                    version => Dist::Zilla::Plugin::MungeFile::WithDataSection->VERSION,
+                    name => 'MungeFile',
+                    version => Dist::Zilla::Plugin::MungeFile->VERSION,
                 },
             ),
         }),

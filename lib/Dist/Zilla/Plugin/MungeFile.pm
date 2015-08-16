@@ -1,11 +1,11 @@
 use strict;
 use warnings;
-package Dist::Zilla::Plugin::MungeFile::WithDataSection;
-# ABSTRACT: Modify files in the build, with templates and DATA section
-# KEYWORDS: plugin file content injection modification template DATA __DATA__ section
+package Dist::Zilla::Plugin::MungeFile;
+# ABSTRACT: Modify files in the build, with templates and arbitrary extra variables
+# KEYWORDS: plugin file content injection modification template
 # vim: set ts=8 sts=4 sw=4 tw=115 et :
 
-our $VERSION = '0.009';
+our $VERSION = '0.008';
 
 use Moose;
 with (
@@ -15,6 +15,7 @@ with (
 );
 use MooseX::SlurpyConstructor 1.2;
 use List::Util 'first';
+use Scalar::Util 'blessed';
 use namespace::autoclean;
 
 sub mvp_multivalue_args { qw(files) }
@@ -49,6 +50,7 @@ around dump_config => sub
         finder => $self->finder,
         files => [ $self->files ],
         $self->_extra_args,
+        blessed($self) ne __PACKAGE__ ? ( version => $VERSION ) : (),
     };
 
     return $config;
@@ -69,30 +71,18 @@ sub munge_files
 
 sub munge_file
 {
-    my ($self, $file) = @_;
+    my ($self, $file, $extra_args) = @_;
 
     $self->log_debug([ 'updating contents of %s in memory', $file->name ]);
 
-    my $content = $file->content;
-
-    my $end_pos = $content =~ m/\n__END__\n/g && pos($content);
-    pos($content) = undef;
-
-    my $data;
-    if ($content =~ m/\n__DATA__\n/spg and (not $end_pos or pos($content) < $end_pos))
-    {
-        $data = ${^POSTMATCH};
-        $data =~ s/\n__END__\n.*$/\n/s;
-    }
-
     $file->content(
         $self->fill_in_string(
-            $content,
+            $file->content,
             {
                 $self->_extra_args,     # must be first
                 dist => \($self->zilla),
                 plugin => \$self,
-                DATA => \$data,
+                %{ $extra_args || {} },
             },
         )
     );
@@ -107,7 +97,7 @@ __END__
 
 In your F<dist.ini>:
 
-    [MungeFile::WithDataSection]
+    [MungeFile]
     file = lib/My/Module.pm
     house = maison
 
@@ -115,23 +105,15 @@ And during the build, F<lib/My/Module.pm>:
 
     my @stuff = qw(
         {{
-            join "    \n",
-            map { expensive_build_time_sub($_) }
-            split(' ', $DATA)   # awk-style whitespace splitting
+            expensive_build_time_sub($house)
         }}
     );
     my ${{ $house }} = 'my castle';
-    __DATA__
-    alpha
-    beta
-    gamma
 
 Is transformed to:
 
     my @stuff = qw(
-        SOMETHING_WITH_ALPHA
-        SOMETHING_WITH_BETA
-        SOMETHING_WITH_GAMMA
+        ...list generated from "maison"
     );
     my $maison = 'my castle';
 
@@ -141,18 +123,7 @@ Is transformed to:
 
 This is a L<FileMunger|Dist::Zilla::Role::FileMunger> plugin for
 L<Dist::Zilla> that passes a file(s)
-through a L<Text::Template>, with a variable provided that contains the
-content from the file's C<__DATA__> section.
-
-L<Text::Template> is used to transform the file by making the C<< $DATA >>
-variable available to all code blocks within C<< {{ }} >> sections.
-
-The data section is extracted by scanning the file for C<< qr/^__DATA__$/ >>,
-so this may pose a problem for you if you include this string in a here-doc or
-some other construct.  However, this method means we do not have to load the
-file before applying the template, which makes it much easier to construct
-your templates in F<.pm> files (i.e. not having to put C<{{> after a comment
-and inside a C<do> block, as was previously required).
+through a L<Text::Template>.
 
 The L<Dist::Zilla> object (as C<$dist>) and this plugin (as C<$plugin>) are
 also made available to the template, for extracting other information about
@@ -190,31 +161,30 @@ B<At least one of the C<finder> or C<file> options is required.>
 
 All other keys/values provided will be passed to the template as is.
 
+=head1 METHODS
+
+=head2 munge_file
+
+    $plugin->munge_file($file, { key => val, ... });
+
+In addition to the standard C<$file> argument, a hashref is accepted which
+contains additional data to be passed through to C<fill_in_string>.
+
 =head1 BACKGROUND
 
-=for stopwords syntactual
+=for stopwords refactored
 
-This module was originally a part of the L<Acme::CPANAuthors::Nonhuman>
-distribution, used to transform a C<DATA> section containing a list of PAUSE
-ids to their corresponding names, as well as embedded HTML with everyone's
-avatar images.  It used to only work on F<.pm> files, by first loading the
-module and then reading from a filehandle created from C<< \*{"$pkg\::DATA"} >>.
-This also required the file to jump through some convoluted syntactual hoops
-to ensure that the file was still compilable B<before> the template was run.
-(Check it out and roll your eyes:
-L<https://github.com/karenetheridge/Acme-CPANAuthors-Nonhuman/blob/v0.005/lib/Acme/CPANAuthors/Nonhuman.pm#L18>)
-
-Now that we support munging all file types, we are forced to parse the file
-more dumbly (by scanning for C<qr/^__DATA__/>), which also removes the need
-for these silly syntax games. The moral of the story is that simple code
-usually B<is> better!
+This module has been refactored out of
+L<Dist:Zilla::Plugin::MungeFile::WithDataSection> and
+L<Dist::Zilla::Plugin::MungeFile::WithConfigFile> to make it more visible as a
+general template-runner file-munging plugin.
 
 =head1 SUPPORT
 
 =for stopwords irc
 
-Bugs may be submitted through L<the RT bug tracker|https://rt.cpan.org/Public/Dist/Display.html?Name=Dist-Zilla-Plugin-MungeFile::WithDataSection>
-(or L<bug-Dist-Zilla-Plugin-MungeFile::WithDataSection@rt.cpan.org|mailto:bug-Dist-Zilla-Plugin-MungeFile::WithDataSection@rt.cpan.org>).
+Bugs may be submitted through L<the RT bug tracker|https://rt.cpan.org/Public/Dist/Display.html?Name=Dist-Zilla-Plugin-MungeFile>
+(or L<bug-Dist-Zilla-Plugin-MungeFile@rt.cpan.org|mailto:bug-Dist-Zilla-Plugin-MungeFile@rt.cpan.org>).
 I am also usually active on irc, as 'ether' at C<irc.perl.org>.
 
 =head1 SEE ALSO
@@ -222,6 +192,7 @@ I am also usually active on irc, as 'ether' at C<irc.perl.org>.
 =for :list
 * L<Dist::Zilla::Plugin::Substitute>
 * L<Dist::Zilla::Plugin::GatherDir::Template>
+* L<Dist::Zilla::Plugin::MungeFile::WithDataSection>
 * L<Dist::Zilla::Plugin::MungeFile::WithConfigFile>
 
 =cut
