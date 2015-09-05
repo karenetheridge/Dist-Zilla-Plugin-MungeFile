@@ -179,14 +179,6 @@ L<Dist:Zilla::Plugin::MungeFile::WithDataSection> and
 L<Dist::Zilla::Plugin::MungeFile::WithConfigFile> to make it more visible as a
 general template-runner file-munging plugin.
 
-=head1 SUPPORT
-
-=for stopwords irc
-
-Bugs may be submitted through L<the RT bug tracker|https://rt.cpan.org/Public/Dist/Display.html?Name=Dist-Zilla-Plugin-MungeFile>
-(or L<bug-Dist-Zilla-Plugin-MungeFile@rt.cpan.org|mailto:bug-Dist-Zilla-Plugin-MungeFile@rt.cpan.org>).
-I am also usually active on irc, as 'ether' at C<irc.perl.org>.
-
 =head1 SEE ALSO
 
 =for :list
