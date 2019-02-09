@@ -1,9 +1,9 @@
 use strict;
 use warnings;
 package Dist::Zilla::Plugin::MungeFile;
+# vim: set ts=8 sts=4 sw=4 tw=115 et :
 # ABSTRACT: Modify files in the build, with templates and arbitrary extra variables
 # KEYWORDS: plugin file content injection modification template
-# vim: set ts=8 sts=4 sw=4 tw=115 et :
 
 our $VERSION = '0.010';
 
